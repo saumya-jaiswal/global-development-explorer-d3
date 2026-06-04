@@ -1,7 +1,28 @@
 # Global Wealth, Education and Population — D3 Interactive Visualisation
 
 ## Overview
-[1-2 sentences about what the project does]
+
+This project explores the relationship between national wealth, education and 
+population across 126 countries from 2000 to 2021. In the current global 
+geopolitical scenario, understanding how wealth and education co-evolve across 
+different economies is increasingly relevant, especially when population size 
+is considered, since a small wealthy country achieving 90% school enrolment 
+tells a very different story to a large country achieving the same figure.
+
+The project uses three datasets: the International Wealth Index (IWI) from 
+Global Data Lab, World Bank education statistics, and World Bank population 
+data, merged into a clean dataset of 1,504 rows. The main output is an 
+interactive D3.js bubble chart where each bubble represents a country, 
+position encodes wealth and education, bubble size encodes population, and 
+colour encodes continent. A year slider animates 22 years of change, revealing 
+how the wealth-education relationship evolved globally between 2000 and 2021.
+
+Key findings include a strong positive correlation between wealth and education 
+(r=0.876), dramatic improvement in low income countries over the 22-year period, 
+and the surprising result that government education spending does not reliably 
+predict future wealth growth, suggesting education improvement is more a 
+byproduct of economic growth than a driver of it.
+![Bubble Chart](screenshot.png)
 
 ## Live Demo
 [If you deploy it — see Step 5 below]
