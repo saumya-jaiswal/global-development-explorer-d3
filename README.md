@@ -1,5 +1,3 @@
-# global-development-explorer-d3
-
 # Global Wealth, Education and Population — D3 Interactive Visualisation
 
 ## Overview
