@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Global Wealth, Education and Population</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fafafa;
+            margin: 20px;
+        }
+        h1 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        p.subtitle {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .tooltip {
+            position: absolute;
+            background: white;
+            border: 1px solid #ccc;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+        }
+        .slider-container {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #333;
+        }
+        input[type=range] {
+            width: 400px;
+        }
+        #year-label {
+            font-weight: bold;
+            font-size: 15px;
+            min-width: 40px;
+        }
+        .legend-item {
+            font-size: 12px;
+        }
+        .axis-label {
+            font-size: 12px;
+            fill: #555;
+        }
+        #filter-container {
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        #filter-container label {
+            margin-left: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Global Wealth, Education and Population (2000–2021)</h1>
+    <p class="subtitle">
+        Each bubble represents a country. X axis= IWI Wealth Score,
+        Y axis= Secondary School Enrolment (%), Bubble size = Population, Colour = Continent.
+    </p>
+
+    <!-- Continent filter applied to view the chart continent-wise-->
+    <div id="filter-container">
+        <strong>Filter by Continent:</strong>
+        <label>
+            <input type="checkbox" class="continent-filter" value="Africa" checked>
+            <span style="color: #D85A30;">&#9679;</span> Africa
+        </label>
+        <label>
+            <input type="checkbox" class="continent-filter" value="America" checked>
+            <span style="color: #1D9E75;">&#9679;</span> America
+        </label>
+        <label>
+            <input type="checkbox" class="continent-filter" value="Asia & Pacific" checked>
+            <span style="color: #EF9F27;">&#9679;</span> Asia &amp; Pacific
+        </label>
+        <label>
+            <input type="checkbox" class="continent-filter" value="Europe" checked>
+            <span style="color: #7F77DD;">&#9679;</span> Europe
+        </label>
+    </div>
+
+    <!-- Chart will be drawn here -->
+    <div id="chart"></div>
+    <div id="country-count" style="font-size: 12px; color: #888; margin-top: 5px;">
+        Showing <span id="count-number">0</span> countries
+    </div>
+    <!-- Year slider -->
+    <div class="slider-container">
+        <label for="yearSlider">Year:</label>
+        <input type="range" id="yearSlider" min="2000" max="2021" step="1" value="2000">
+        <span id="year-label">2000</span>
+    </div>
+
+    <!-- Tooltip div -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+    // D3 Bubble Chart — adapted from D3 Graph Gallery (https://d3-graph-gallery.com/bubble.html)
+    // Yan Holtz, D3 Graph Gallery. Adapted for wealth-education-population analysis.
+
+        // setting up the chart area - margins are needed so axes don't get cut off
+        const margin = { top: 50, right: 180, bottom: 80, left: 80 };
+        const width = 800 - margin.left - margin.right;
+        const height = 500 - margin.top - margin.bottom;
+
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+        // each continent gets a specific colour for the bubbles and legend
+        const colourByContinent = d3.scaleOrdinal()
+            .domain(["Africa", "America", "Asia & Pacific", "Europe"])
+            .range(["#D85A30", "#1D9E75", "#EF9F27", "#7F77DD"]);
+
+        // loading csv data
+        d3.csv("wealth_education_population_clean.csv").then(function(data) {
+
+            // Remove any rows with missing key values
+            data = data.filter(function(d) {
+                return d.country !== "" && 
+                       d.continent !== "" && 
+                       d.iwi_score !== "" && 
+                       d.secondary_enrol !== "" && 
+                       d.population !== "" && 
+                       d.year !== "";
+            });
+
+            // Convert string columns to numbers
+            data.forEach(function(d) {
+                d.iwi_score       = +d.iwi_score;
+                d.secondary_enrol = +d.secondary_enrol;
+                d.population      = +d.population;
+                d.year            = +d.year;
+            });
+
+            // scales: x and y are linear
+            const xScale = d3.scaleLinear()
+                .domain([0, 100])
+                .range([0, width]);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, 100])
+                .range([height, 0]);
+
+            // scaleSqrt ensures bubble area is proportional to population
+            const radiusScale = d3.scaleSqrt()
+                .domain([0, d3.max(data, d => d.population)])
+                .range([3, 40]);
+
+            // drawn axes and labels only once, since they don't change with year
+            // X axis
+            svg.append("g")
+                .attr("transform", `translate(0, ${height})`)
+                .call(d3.axisBottom(xScale));
+
+            // X axis label
+            svg.append("text")
+                .attr("class", "axis-label")
+                .attr("x", width / 2)
+                .attr("y", height + 45)
+                .attr("text-anchor", "middle")
+                .text("IWI Wealth Score (0–100)");
+
+            // Y axis
+            svg.append("g")
+                .call(d3.axisLeft(yScale));
+
+            // Y axis label
+            svg.append("text")
+                .attr("class", "axis-label")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -height / 2)
+                .attr("y", -50)
+                .attr("text-anchor", "middle")
+                .text("Secondary School Enrolment (%)");
+
+            // data source 
+            svg.append("text")
+                .attr("x", width / 2)
+                .attr("y", height + 65)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "10px")
+                .attr("fill", "#999")
+                .text("Sources: Global Data Lab (IWI), World Bank (Education, Population)");
+
+            // legend for continent colours and bubble size
+            const continents = ["Africa", "America", "Asia & Pacific", "Europe"];
+
+            const legend = svg.append("g")
+                .attr("transform", `translate(${width + 20}, 20)`);
+
+            // legend title — Continent
+            legend.append("text")
+                .attr("x", 0)
+                .attr("y", 0)
+                .attr("font-size", "13px")
+                .attr("font-weight", "bold")
+                .attr("fill", "#333")
+                .text("Continent");
+
+            // one circle + label per continent
+            continents.forEach(function(continent, i) {
+                legend.append("circle")
+                    .attr("cx", 8)
+                    .attr("cy", 20 + i * 25)
+                    .attr("r", 7)
+                    .attr("fill", colourByContinent(continent))
+                    .attr("opacity", 0.8);
+
+                legend.append("text")
+                    .attr("x", 22)
+                    .attr("y", 25 + i * 25)
+                    .attr("font-size", "12px")
+                    .attr("fill", "#444")
+                    .text(continent);
+            });
+
+            // Bubble size legend
+            legend.append("text")
+                .attr("x", 0)
+                .attr("y", 140)
+                .attr("font-size", "13px")
+                .attr("font-weight", "bold")
+                .attr("fill", "#333")
+                .text("Bubble size");
+
+            legend.append("text")
+                .attr("x", 0)
+                .attr("y", 158)
+                .attr("font-size", "11px")
+                .attr("fill", "#666")
+                .text("= Population");
+
+            // tooltip div for adding interactivity
+            const tooltip = d3.select("#tooltip");
+
+            // initial year 2000
+            updateChart(2000);
+
+            // slider event listener — updates chart when year changes
+            d3.select("#yearSlider").on("input", function() {
+                const selectedYear = +this.value;
+                d3.select("#year-label").text(selectedYear);
+                updateChart(selectedYear);
+            });
+
+            // continent filter event listener — updates chart when continent selection changes
+            d3.selectAll(".continent-filter").on("change", function() {
+                updateChart(+d3.select("#yearSlider").property("value"));
+            });
+
+            // update function to redraw circles based on selected year and active continent filters
+            function updateChart(selectedYear) {
+
+                // Get currently checked continents
+                const activeContinents = [];
+                document.querySelectorAll(".continent-filter:checked").forEach(function(cb) {
+                    activeContinents.push(cb.value);
+                });
+
+                // Filter data to selected year AND active continents
+                const yearData = data.filter(d =>
+                    d.year === selectedYear &&
+                    activeContinents.includes(d.continent)
+                );
+
+                // JOIN data to circles (key by country name)
+                const circles = svg.selectAll("circle.bubble")
+                    .data(yearData, d => d.country);
+
+                // ENTER new circles
+                circles.enter()
+                    .append("circle")
+                    .attr("class", "bubble")
+                    .attr("cx", d => xScale(d.iwi_score))
+                    .attr("cy", d => yScale(d.secondary_enrol))
+                    .attr("r", 0)
+                    .attr("fill", d => colourByContinent(d.continent))
+                    .attr("opacity", 0.7)
+                    .attr("stroke", "white")
+                    .attr("stroke-width", 0.5)
+                    // tooltip on mouseover
+                    .on("mouseover", function(event, d) {
+                        tooltip
+                            .style("opacity", 1)
+                            .html(`
+                                <strong>${d.country}</strong><br>
+                                <hr style="margin:4px 0">
+                                Wealth (IWI): ${d.iwi_score}<br>
+                                Education: ${d.secondary_enrol}%<br>
+                                Population: ${(d.population / 1e6).toFixed(1)}M<br>
+                                Region: ${d.continent}<br>
+                                Income: ${d.income_group}
+                            `)
+                            .style("left", (event.pageX + 15) + "px")
+                            .style("top", (event.pageY - 30) + "px");
+                    })
+                    .on("mouseout", function() {
+                        tooltip.style("opacity", 0);
+                    })
+                    // MERGE enter + update selections
+                    .merge(circles)
+                    .transition()
+                    .duration(500)
+                    .attr("cx", d => xScale(d.iwi_score))
+                    .attr("cy", d => yScale(d.secondary_enrol))
+                    .attr("r", d => radiusScale(d.population));
+
+                // EXIT — smoothly shrink removed circles
+                circles.exit()
+                    .transition()
+                    .duration(300)
+                    .attr("r", 0)
+                    .remove();
+                // update country count display
+                document.getElementById("count-number").textContent = yearData.length;    
+            }
+        });
+    </script>
+</body>
+</html>
