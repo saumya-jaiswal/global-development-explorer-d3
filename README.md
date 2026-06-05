@@ -1,4 +1,4 @@
-# Global Wealth, Education and Population — D3 Interactive Visualisation
+# Global Wealth, Education and Population: D3 Interactive Visualisation
 
 ## Overview
 
@@ -25,7 +25,7 @@ byproduct of economic growth than a driver of it.
 ![Bubble Chart](screenshot.png)
 
 ## Live Demo
-[If you deploy it — see Step 5 below]
+[View the interactive chart here](https://saumya-jaiswal.github.io/global-development-explorer-d3/)
 
 ## Research Questions
 - Q1: Analyse the relation between wealth and education. Are there detectable trends?
